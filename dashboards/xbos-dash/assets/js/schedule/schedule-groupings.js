@@ -3,6 +3,17 @@ $(document).ready(function() {
 	var zoneSel = 0;
 	var zoneArr = [];
 
+	function getModes() {
+		$.ajax({
+			"url": "http://127.0.0.1:5000/save_mode",
+			"type": "GET",
+			"dataType": "json",
+			"success": function(d) {
+				console.log("hi");
+			}
+		});
+	} getModes();
+
 	$(".filled-in").each(function() {
 		$(this).click(function() {
 			var t = $(this).find("span").prevObject["0"]["labels"][0]["innerText"];

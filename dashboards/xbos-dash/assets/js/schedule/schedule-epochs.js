@@ -1,20 +1,6 @@
 $(document).ready(function() {
 	M.AutoInit();
-	var passAlong = sessionStorage.getItem("groupname");
-	if (!passAlong) {
-		$("#groupName").prop("value", "Untitled");
-	}
-	// sessionStorage.setItem("modesToGroup", passAlong);
-	// var cname = $("#groupName").prop("value");
-	// if (passAlong) {
-	// 	console.log(passAlong);
-	// 	console.log(cname);
-	// 	if (cname != passAlong) {
-	// 		$("#groupName").prop("value", passAlong);
-	// 		sessionStorage.setItem("modesToGroup", "");
-	// 	}
-	// }
-	// let c = ["pink", "deep-orange", "green", "teal", "blue", "deep-purple", "tp-blue"];
+
 	let pipvals = ["12am", "2am", "4am", "6am", "8am", "10am", "12pm", "2pm", "4pm", "6pm", "8pm", "10pm", "12am"];
 	let piprev = ["12am", "10pm", "8pm", "6pm", "4pm", "2pm", "12pm", "10am", "8am", "6am", "4am", "2am", "12am"];
 
@@ -46,6 +32,7 @@ $(document).ready(function() {
 						[null, null, null],[null, null, null],
 						[null, null, null],[null, null, null],
 						[null, null, null]];
+	var dayToIndex = {"sun": 0, "mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6, "dr": 7, "hol": 8};
 
 	$(".sched-slider").each(function(i) {
 		var master = getMaster();
@@ -98,7 +85,7 @@ $(document).ready(function() {
 		});
 	}
 
-	var colors = ["#018AE0", "#FDB515", "#cab2d6", "#fccde5", "#b2df8a"];
+	var colors = ["#018ae0", "#fdb515", "#b39ddb", "#fccde5", "#b2df8a", "#ff8a65"];
 	var curMode = 0;
 	var curColor = colors[0];
 	$(".with-gap").each(function(i) {
@@ -131,27 +118,33 @@ $(document).ready(function() {
 		});
 	} getConnect();
 
-	var location;
-	function readIn() {
-		// location = "Basketball Courts";
-		$("#location").append(location);
-	} readIn();
+	function readIn(obj) {
+		$("#groupName").prop("value", obj.groupName);
+		$.each(obj["times"], function(i, v) {
+			var ind = dayToIndex[i];
+			var s = sliders[ind];
+			var master = getMaster();
+			if (ind == 0 || ind == 8) { master.pips = pips; }
+			master.start = $.map(v, function(val) { return parseFloat(val); });
+			counts[ind] = v.length + 1;
+			var ts; (ts = []).length = counts[ind]; ts.fill(true);
+			master.connect = ts;
+			s.noUiSlider.destroy();
+			noUiSlider.create(s, master);
+		});
+		setTop();
+		$.each(obj["settings"], function(i, v) {
+			sliderColors[dayToIndex[i]] = $.map(v, function(val) { return colors[val]; });
+			sliderModes[dayToIndex[i]] = v;
+		});
+	}
+	if (false) { readIn({"groupName": "testing", "settings": {"dr": [0, 1, 2],"fri": [5, 2, 3],"hol": [5, 2, 3, 0],"mon": [4, 5, 3],"sat": [3, 0, 3, 1],"sun": [0, 1, 0, 2, 3, 4],"thu": [2, 3, 4],"tue": [4, 3, 2],"wed": [1, 0, 2]},"times": {"dr": ["8.00", "18.00"],"fri": ["8.00", "18.00"],"hol": ["4.00", "8.00", "18.00"],"mon": ["8.00", "18.00"],"sat": ["10.00", "12.00", "18.00"],"sun": ["2.00", "8.00", "18.00", "22.00", "23.00"],"thu": ["8.00", "18.00"],"tue": ["8.00", "18.00"],"wed": ["8.00", "18.00"]}}); }
 
 	function readOut() {
 		var obj = new Object();
-		// obj.name = location;
-		// obj.zones = [1, 3, 5, 7];
-		// obj.modes = [];
-		// $(".mode-card").each(function(i) {
-		// 	var m = new Object();
-		// 	m.id = i;
-		// 	var inputs = $(this).find("input");
-		// 	m.name = inputs[0].value;
-		// 	m.heating = inputs[1].value;
-		// 	m.cooling = inputs[2].value;
-		// 	m.enabled = $(inputs[3]).prop("checked");
-		// 	obj.modes.push(m);
-		// });
+		
+		obj.groupName = $("#groupName").prop("value");
+		
 		var t = new Object();
 		t.sun = $.extend([], sliders[0].noUiSlider.get());
 		t.mon = $.extend([], sliders[1].noUiSlider.get());
@@ -162,8 +155,8 @@ $(document).ready(function() {
 		t.sat = $.extend([], sliders[6].noUiSlider.get());
 		t.dr = $.extend([], sliders[7].noUiSlider.get());
 		t.hol = $.extend([], sliders[8].noUiSlider.get());
-
 		obj.times = t;
+		
 		var sets = new Object();
 		sets.sun = sliderModes[0];
 		sets.mon = sliderModes[1];
@@ -175,8 +168,27 @@ $(document).ready(function() {
 		sets.dr = sliderModes[7];
 		sets.hol = sliderModes[8];
 		obj.settings = sets;
+		
 		console.log(obj);
 	}
+
+	function updateModes() {
+		// localStorage.setItem("mode-settings", JSON.stringify({modes: [{id: 0, name: "Closed", heating: "55", cooling: "85", enabled: true}, {id: 1, name: "Open", heating: "70", cooling: "75", enabled: false}, {id: 2, name: "Do Not Exceed", heating: "52", cooling: "83", enabled: true}, {id: 3, name: "Other", heating: "51", cooling: "84", enabled: true}, {id: 4, name: "Midnight", heating: "54", cooling: "88", enabled: false}, {id: 5, name: "Early Morn", heating: "50", cooling: "80", enabled: true}]}));
+		// var modeCards = [];
+		// $(".mode-card").each(function() { modeCards.push(this); });
+		var modeObj = JSON.parse(localStorage.getItem("mode-settings"))["modes"];
+		var names = [];
+		var temps = [];
+		var switches = [];
+		for (var i in modeObj) {
+			var curr = modeObj[i];
+			names.push(curr["name"]);
+			switches.push(curr["enabled"]);
+			temps.push(curr["heating"]);
+			temps.push(curr["cooling"]);
+		}
+		$(".mte").each(function(i) { this.html()})
+	} updateModes();
 
 	$("#apply-modes").click(function() {
 		M.toast({html: 'Preferences saved and modes applied.', classes:"rounded", displayLength: 5000});
@@ -205,11 +217,10 @@ $(document).ready(function() {
 				if (!$.isArray(l)) { l = [l]; }
 				else if (l.length == 5) {
 					var toastElement = document.querySelector('.toast');
-					if (toastElement) {
-  						var toastInstance = M.Toast.getInstance(toastElement);
-						toastInstance.dismiss();
+					if (!toastElement) {
+						M.toast({html: "You cannot have more than 6 epochs", classes: "rounded", displayLength: 2500});
 					}
-					M.toast({html: "You cannot have more than 6 epochs", classes: "rounded", displayLength: 2500});
+					
 					return;
 				}
 				l = l.map(function(x) { return parseFloat(x); });
