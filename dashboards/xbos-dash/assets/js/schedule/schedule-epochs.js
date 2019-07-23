@@ -119,7 +119,7 @@ $(document).ready(function() {
 	} getConnect();
 
 	function readIn(obj) {
-		$("#groupName").prop("value", obj.groupName);
+		$("#groupName").prop("value", obj.group);
 		$.each(obj["times"], function(i, v) {
 			var ind = dayToIndex[i];
 			var s = sliders[ind];
@@ -138,12 +138,17 @@ $(document).ready(function() {
 			sliderModes[dayToIndex[i]] = v;
 		});
 	}
-	if (false) { readIn({"groupName": "testing", "settings": {"dr": [0, 1, 2],"fri": [5, 2, 3],"hol": [5, 2, 3, 0],"mon": [4, 5, 3],"sat": [3, 0, 3, 1],"sun": [0, 1, 0, 2, 3, 4],"thu": [2, 3, 4],"tue": [4, 3, 2],"wed": [1, 0, 2]},"times": {"dr": ["8.00", "18.00"],"fri": ["8.00", "18.00"],"hol": ["4.00", "8.00", "18.00"],"mon": ["8.00", "18.00"],"sat": ["10.00", "12.00", "18.00"],"sun": ["2.00", "8.00", "18.00", "22.00", "23.00"],"thu": ["8.00", "18.00"],"tue": ["8.00", "18.00"],"wed": ["8.00", "18.00"]}}); }
 
-	function readOut() {
+	var cgn = localStorage.getItem("curr-group-name");
+	if (cgn != null) { readIn(JSON.parse(localStorage.getItem(cgn + "-group"))); }
+	
+	// if (currGroup != null) { readIn(JSON.parse(currGroup)); }
+	// if (true) { readIn({"groupName": "testing", "settings": {"dr": [0, 1, 2],"fri": [5, 2, 3],"hol": [5, 2, 3, 0],"mon": [4, 5, 3],"sat": [3, 0, 3, 1],"sun": [0, 1, 0, 2, 3, 4],"thu": [2, 3, 4],"tue": [4, 3, 2],"wed": [1, 0, 2]},"times": {"dr": ["8.00", "18.00"],"fri": ["8.00", "18.00"],"hol": ["4.00", "8.00", "18.00"],"mon": ["8.00", "18.00"],"sat": ["10.00", "12.00", "18.00"],"sun": ["2.00", "8.00", "18.00", "22.00", "23.00"],"thu": ["8.00", "18.00"],"tue": ["8.00", "18.00"],"wed": ["8.00", "18.00"]}}); }
+
+	function readOut(name) {
 		var obj = new Object();
 		
-		obj.groupName = $("#groupName").prop("value");
+		obj.group = name;
 		
 		var t = new Object();
 		t.sun = $.extend([], sliders[0].noUiSlider.get());
@@ -169,30 +174,53 @@ $(document).ready(function() {
 		sets.hol = sliderModes[8];
 		obj.settings = sets;
 		
-		console.log(obj);
+		var cgn = localStorage.getItem("curr-group-name");
+		if (cgn == null) {
+			console.log("hi");
+			obj.zones = JSON.parse(localStorage.getItem("zones-for-group"));
+		} else {
+			obj.zones = JSON.parse(localStorage.getItem(cgn + "-group")).zones;
+			if (name != cgn) {
+				localStorage.removeItem(cgn + "-group");
+				localStorage.setItem("curr-group-name", name);
+			}
+		}
+		localStorage.setItem(name + "-group", JSON.stringify(obj));
+		
+		$.ajax({
+			"url": "http://127.0.0.1:5000/get_groups",
+			"type": "GET",
+			"dataType": "json",
+			"success": function(d) {
+				console.log("hi");
+			},
+			"error": function(d) {
+				console.log(obj);
+			}
+		});
 	}
 
 	function updateModes() {
 		// localStorage.setItem("mode-settings", JSON.stringify({modes: [{id: 0, name: "Closed", heating: "55", cooling: "85", enabled: true}, {id: 1, name: "Open", heating: "70", cooling: "75", enabled: false}, {id: 2, name: "Do Not Exceed", heating: "52", cooling: "83", enabled: true}, {id: 3, name: "Other", heating: "51", cooling: "84", enabled: true}, {id: 4, name: "Midnight", heating: "54", cooling: "88", enabled: false}, {id: 5, name: "Early Morn", heating: "50", cooling: "80", enabled: true}]}));
-		// var modeCards = [];
-		// $(".mode-card").each(function() { modeCards.push(this); });
 		var modeObj = JSON.parse(localStorage.getItem("mode-settings"))["modes"];
-		var names = [];
-		var temps = [];
-		var switches = [];
+		var modeDiv = $("#mode-div");
+		var count = 0;
 		for (var i in modeObj) {
 			var curr = modeObj[i];
-			names.push(curr["name"]);
-			switches.push(curr["enabled"]);
-			temps.push(curr["heating"]);
-			temps.push(curr["cooling"]);
+			modeDiv.append("<div style='background-color: " + colors[count] + ";' class='col s2 emode mode-card'><h4 id='mode" + count + "' class='mte'>" + curr["name"] + "</h4><div class='setpnt-div'><div class='red lighten-2 spl etab'>" + curr["heating"] + "</div><div class='blue lighten-2 spr etab'>" + curr["cooling"] + "</div></div></div>");
+			if (count != 5) { modeDiv.append("<div class='col sml'></div>"); }
+			count += 1;
 		}
-		$(".mte").each(function(i) { this.html()})
 	} updateModes();
 
 	$("#apply-modes").click(function() {
-		M.toast({html: 'Preferences saved and modes applied.', classes:"rounded", displayLength: 5000});
-		readOut();
+		var gn = $("#groupName").prop("value").trim();
+		if (gn.length < 3) {
+			M.toast({html: 'Group Name must be at least 3 characters.', classes:"rounded red", displayLength: 5000, color:"red"});	
+		} else {
+			M.toast({html: 'Preferences saved and modes applied.', classes:"rounded", displayLength: 5000});
+			readOut(gn);
+		}
 	});
 
 	function setColors() {
